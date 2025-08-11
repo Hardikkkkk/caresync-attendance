@@ -1,0 +1,392 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 17.5
+-- Dumped by pg_dump version 17.5
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: ClockEvent; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."ClockEvent" (
+    id integer NOT NULL,
+    "userId" integer NOT NULL,
+    type text NOT NULL,
+    note text,
+    latitude double precision NOT NULL,
+    longitude double precision NOT NULL,
+    "timestamp" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public."ClockEvent" OWNER TO postgres;
+
+--
+-- Name: ClockEvent_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."ClockEvent_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."ClockEvent_id_seq" OWNER TO postgres;
+
+--
+-- Name: ClockEvent_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."ClockEvent_id_seq" OWNED BY public."ClockEvent".id;
+
+
+--
+-- Name: Setting; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Setting" (
+    id integer NOT NULL,
+    name text NOT NULL,
+    value text NOT NULL
+);
+
+
+ALTER TABLE public."Setting" OWNER TO postgres;
+
+--
+-- Name: Setting_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."Setting_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."Setting_id_seq" OWNER TO postgres;
+
+--
+-- Name: Setting_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."Setting_id_seq" OWNED BY public."Setting".id;
+
+
+--
+-- Name: User; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."User" (
+    id integer NOT NULL,
+    name text NOT NULL,
+    email text NOT NULL,
+    role text NOT NULL
+);
+
+
+ALTER TABLE public."User" OWNER TO postgres;
+
+--
+-- Name: User_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public."User_id_seq"
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."User_id_seq" OWNER TO postgres;
+
+--
+-- Name: User_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public."User_id_seq" OWNED BY public."User".id;
+
+
+--
+-- Name: ClockEvent id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."ClockEvent" ALTER COLUMN id SET DEFAULT nextval('public."ClockEvent_id_seq"'::regclass);
+
+
+--
+-- Name: Setting id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Setting" ALTER COLUMN id SET DEFAULT nextval('public."Setting_id_seq"'::regclass);
+
+
+--
+-- Name: User id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."User" ALTER COLUMN id SET DEFAULT nextval('public."User_id_seq"'::regclass);
+
+
+--
+-- Data for Name: ClockEvent; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."ClockEvent" (id, "userId", type, note, latitude, longitude, "timestamp") FROM stdin;
+1	1	IN	Test Clock In	18.52	73.85	2025-08-07 14:48:29.592
+2	1	OUT	Manual test	18.52	73.85	2025-08-07 15:15:21.824
+3	1	OUT	Manual test	18.52	73.85	2025-08-07 15:15:35.678
+4	1	OUT		18.6414588	73.7755993	2025-08-07 15:26:13.571
+5	1	IN		18.6414588	73.7755993	2025-08-07 15:26:27.634
+6	1	OUT		18.64145	73.7755987	2025-08-07 15:26:40.236
+7	1	IN		18.5565184	73.7837056	2025-08-07 15:26:50.668
+8	1	OUT		18.6414607	73.7756119	2025-08-07 15:29:01.073
+9	1	IN		18.6414568	73.7755979	2025-08-07 15:41:23.294
+10	1	IN		18.6414448	73.7756084	2025-08-08 06:46:52.257
+11	1	OUT		18.6414448	73.7756084	2025-08-08 06:46:55.99
+12	2	IN		18.6414438	73.7756146	2025-08-08 08:30:47.985
+13	1	IN		18.641447	73.7756153	2025-08-08 13:16:27.238
+14	1	OUT		18.641447	73.7756153	2025-08-08 13:16:37.905
+15	3	IN		18.6414495	73.7755967	2025-08-09 06:17:15.506
+16	3	IN		18.6414474	73.775599	2025-08-09 06:23:10.904
+17	3	IN		18.6414459	73.7756094	2025-08-10 06:33:39.561
+18	3	IN		18.6414459	73.7756094	2025-08-10 06:34:11.68
+19	3	IN		18.6414417	73.7756096	2025-08-10 06:42:39.44
+20	3	OUT		18.6414417	73.7756096	2025-08-10 06:42:44.308
+21	3	IN		18.6414561	73.7756001	2025-08-10 14:08:56.36
+22	3	OUT		18.6414561	73.7756001	2025-08-10 14:09:05.309
+23	2	IN		18.6414602	73.775607	2025-08-10 14:43:48.327
+24	3	IN		18.4516608	73.8787328	2025-08-10 14:44:10.276
+25	2	IN		18.641452	73.7756079	2025-08-10 14:56:01.245
+26	2	IN		18.4516608	73.8787328	2025-08-10 15:09:49.126
+27	2	IN		18.6414426	73.7756042	2025-08-10 15:17:48.199
+28	2	IN		18.6414426	73.7756042	2025-08-10 15:17:51.892
+29	2	IN		18.6414426	73.775604	2025-08-10 15:18:03.098
+30	2	IN		18.6414426	73.775604	2025-08-10 15:18:10.781
+31	2	IN		18.6414426	73.775604	2025-08-10 15:18:11.425
+32	2	IN		18.6414426	73.775604	2025-08-10 15:18:11.581
+33	2	IN		18.6414426	73.775604	2025-08-10 15:18:11.74
+34	3	IN		18.6414426	73.775604	2025-08-10 15:18:29.724
+35	3	IN		18.6414426	73.775604	2025-08-10 15:18:30.581
+36	3	IN		18.6414426	73.775604	2025-08-10 15:18:30.753
+37	3	IN		18.6414426	73.775604	2025-08-10 15:18:30.908
+38	3	IN		18.6414426	73.775604	2025-08-10 15:18:31.058
+39	3	IN		18.6414426	73.775604	2025-08-10 15:18:31.212
+40	3	IN		18.6414499	73.7755894	2025-08-10 15:21:13.772
+41	3	IN		18.6414486	73.7755902	2025-08-10 15:21:25.926
+42	3	IN		18.5246091	73.8786239	2025-08-10 15:27:56.708
+43	3	IN		18.5246091	73.8786239	2025-08-10 15:28:10.302
+44	3	IN		18.5246091	73.8786239	2025-08-10 15:28:12.583
+45	3	IN		18.5246091	73.8786239	2025-08-10 15:28:13.381
+46	3	IN		18.5246091	73.8786239	2025-08-10 15:28:13.589
+47	3	IN		18.5246091	73.8786239	2025-08-10 15:28:13.731
+48	3	IN		18.5246091	73.8786239	2025-08-10 15:28:13.889
+49	3	IN		18.5246091	73.8786239	2025-08-10 15:28:14.021
+50	3	IN		18.5246091	73.8786239	2025-08-10 15:28:14.198
+51	3	IN		18.5246091	73.8786239	2025-08-10 15:28:14.349
+52	3	IN		18.5246091	73.8786239	2025-08-10 15:28:14.456
+53	3	IN		18.5246091	73.8786239	2025-08-10 15:28:14.623
+54	3	IN		18.5246091	73.8786239	2025-08-10 15:28:14.831
+55	3	IN		18.5246091	73.8786239	2025-08-10 15:28:15.139
+56	3	IN		18.6414561	73.7756174	2025-08-10 15:28:40.577
+57	3	IN		18.6414543	73.7756083	2025-08-10 15:44:24.405
+58	3	IN		18.6414543	73.7756083	2025-08-10 15:44:26.031
+59	3	IN		18.6414543	73.7756083	2025-08-10 15:44:26.2
+60	3	IN		18.6414543	73.7756083	2025-08-10 15:44:26.353
+61	3	IN		18.6414543	73.7756083	2025-08-10 15:44:26.502
+62	3	IN		18.6414543	73.7756083	2025-08-10 15:44:32.367
+63	3	IN		18.641446	73.7756001	2025-08-10 15:45:52.238
+64	2	IN		18.641446	73.7756001	2025-08-10 15:46:55.724
+65	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:58:32.827
+66	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:35.165
+67	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:35.176
+68	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:35.166
+69	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:35.168
+70	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:35.171
+71	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:43.916
+72	2	IN	\N	20.0278016	73.8295808	2025-08-10 15:59:45.124
+73	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:45.25
+74	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:46.981
+75	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:46.984
+76	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:46.994
+77	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:46.999
+78	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:46.996
+79	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:47.003
+80	2	IN		18.6414462	73.7756075	2025-08-10 16:02:46.988
+81	2	IN	\N	18.6414462	73.7756075	2025-08-10 16:02:47.025
+82	2	IN		20.0278016	73.8295808	2025-08-10 17:04:43.084
+83	2	IN		20.0278016	73.8295808	2025-08-10 17:05:00.184
+84	2	IN		20.0278016	73.8295808	2025-08-10 17:05:01.269
+85	2	IN		20.0278016	73.8295808	2025-08-10 17:05:19.867
+86	2	IN		20.0278016	73.8295808	2025-08-10 17:07:36.246
+87	2	IN		20.0278016	73.8295808	2025-08-10 17:10:16.362
+88	2	IN		20.0278016	73.8295808	2025-08-10 17:10:24.868
+89	2	IN		20.0278016	73.8295808	2025-08-10 17:11:55.662
+90	2	IN		20.0278016	73.8295808	2025-08-10 17:20:06.566
+91	2	IN		20.0278016	73.8295808	2025-08-10 17:20:15.833
+92	2	IN		20.0278016	73.8295808	2025-08-10 17:22:49.416
+93	2	IN		20.0278016	73.8295808	2025-08-10 17:22:59.131
+94	2	IN		20.0278016	73.8295808	2025-08-10 17:23:01.636
+95	2	IN		20.0278016	73.8295808	2025-08-10 17:32:48.003
+96	2	IN		20.0278016	73.8295808	2025-08-10 17:32:55.549
+97	2	IN		20.0278016	73.8295808	2025-08-10 17:35:30.01
+98	2	IN		20.0278016	73.8295808	2025-08-10 17:35:59.51
+99	2	IN		20.0278016	73.8295808	2025-08-10 17:36:18.57
+100	2	IN		20.0278016	73.8295808	2025-08-10 17:36:26.467
+101	2	IN		20.0278016	73.8295808	2025-08-10 17:41:08.398
+102	2	IN		20.0278016	73.8295808	2025-08-10 17:41:13.65
+103	2	IN		20.0278016	73.8295808	2025-08-10 17:41:46.28
+104	2	IN		20.0278016	73.8295808	2025-08-10 17:41:48.98
+105	2	IN		20.0278016	73.8295808	2025-08-10 17:43:43.803
+106	2	IN		18.6414595	73.7756074	2025-08-10 17:57:16.696
+107	2	OUT		18.6414595	73.7756074	2025-08-10 17:57:24.416
+108	2	IN		18.6414458	73.775609	2025-08-11 06:43:51.075
+109	2	OUT		18.6414458	73.775609	2025-08-11 06:44:02.905
+110	2	IN		18.6414458	73.775609	2025-08-11 06:44:08.303
+111	3	IN		18.6414531	73.7756091	2025-08-11 06:48:49.917
+112	3	OUT		18.6414531	73.7756091	2025-08-11 06:48:56.1
+113	2	IN		18.6414519	73.7755982	2025-08-11 07:59:03.91
+114	2	OUT		18.6414519	73.7755982	2025-08-11 07:59:08.906
+115	2	IN		18.6414519	73.7755982	2025-08-11 07:59:09.745
+116	2	OUT		18.6414519	73.7755982	2025-08-11 07:59:10.847
+117	2	IN		18.6414519	73.7755982	2025-08-11 08:00:07.272
+118	2	OUT		18.6414519	73.7755982	2025-08-11 08:00:08.686
+119	1	IN		20.0278016	73.8295808	2025-08-11 09:48:47.686
+120	1	OUT		20.0278016	73.8295808	2025-08-11 09:48:53.651
+121	1	IN		20.0278016	73.8295808	2025-08-11 09:49:02.002
+122	1	IN		18.641448	73.7756132	2025-08-11 10:21:30.52
+123	2	IN		18.641448	73.7756132	2025-08-11 10:22:07.801
+124	2	OUT		18.641448	73.7756132	2025-08-11 10:22:15.343
+125	1	IN		18.6056704	73.8197504	2025-08-11 10:30:38.327
+126	3	IN		18.6056704	73.8197504	2025-08-11 10:31:44.475
+127	3	IN		18.6056704	73.8197504	2025-08-11 10:35:02.501
+128	3	IN		18.6056704	73.8197504	2025-08-11 10:35:08.128
+129	3	IN		18.6056704	73.8197504	2025-08-11 10:38:49.401
+130	3	IN		18.6056704	73.8197504	2025-08-11 10:44:32.215
+131	5	IN		20.0278016	73.8295808	2025-08-11 13:59:43.961
+132	7	IN		20.0278016	73.8295808	2025-08-11 14:18:39.021
+133	7	IN		20.0278016	73.8295808	2025-08-11 14:18:59.717
+134	7	OUT		20.0278016	73.8295808	2025-08-11 14:19:36.901
+\.
+
+
+--
+-- Data for Name: Setting; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."Setting" (id, name, value) FROM stdin;
+1	geo_perimeter	{"lat":20.027802,"lng":73.829581,"radius":0.3}
+\.
+
+
+--
+-- Data for Name: User; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public."User" (id, name, email, role) FROM stdin;
+2	Hardik Bhondve	bhondvehardik@gmail.com	careworker
+1	Forge Pegasus	forgepegasus2@gmail.com	manager
+3	hardik.bhondve99@gmail.com	hardik.bhondve99@gmail.com	careworker
+4	bhondvepushpa@gmail.com	bhondvepushpa@gmail.com	careworker
+5	hardik@mail.com	hardik@mail.com	careworker
+6	hardikb@mail.com	hardikb@mail.com	careworker
+7	hardik12@mail.com	hardik12@mail.com	careworker
+8	james@gmail.com	james@gmail.com	careworker
+\.
+
+
+--
+-- Name: ClockEvent_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."ClockEvent_id_seq"', 134, true);
+
+
+--
+-- Name: Setting_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."Setting_id_seq"', 25, true);
+
+
+--
+-- Name: User_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public."User_id_seq"', 8, true);
+
+
+--
+-- Name: ClockEvent ClockEvent_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."ClockEvent"
+    ADD CONSTRAINT "ClockEvent_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Setting Setting_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Setting"
+    ADD CONSTRAINT "Setting_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: User User_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."User"
+    ADD CONSTRAINT "User_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Setting_name_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "Setting_name_key" ON public."Setting" USING btree (name);
+
+
+--
+-- Name: User_email_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "User_email_key" ON public."User" USING btree (email);
+
+
+--
+-- Name: ClockEvent ClockEvent_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."ClockEvent"
+    ADD CONSTRAINT "ClockEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
