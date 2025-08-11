@@ -1,9 +1,7 @@
 require('dotenv').config();
-const { ApolloServer, gql } = require('apollo-server-express');
+const { ApolloServer, gql } = require('apollo-server');
 const { PrismaClient } = require('@prisma/client');
 const { subDays } = require('date-fns');
-const express = require('express');
-const cors = require('cors');
 
 const prisma = new PrismaClient();
 
@@ -130,8 +128,6 @@ dailyClockInCount: async (_, __, { prisma }) => {
   })).reverse();
 },
 
-
-
     staffClockStats: async () => {
       const users = await prisma.user.findMany();
       const today = new Date();
@@ -243,59 +239,120 @@ updateSetting: async (_, { name, value }) => {
   },
 };
 
-async function startServer() {
-  // Create Express app
-  const app = express();
-
-  // Configure CORS middleware
-  app.use(cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Apollo-Require-Preflight'],
-  }));
-
-  // Handle preflight requests
-  app.options('*', cors());
-
-  // Create Apollo Server
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-    context: ({ req }) => ({
-      prisma,
-      // You can pass other context like auth user here
-    }),
-    // Remove CORS from Apollo Server since we're handling it at Express level
-    cors: false,
-    introspection: true,
-    playground: true
-  });
-
-  await server.start();
-  server.applyMiddleware({ 
-    app, 
-    path: '/graphql',
-    cors: false // We're handling CORS at app level
-  });
-
-  const PORT = process.env.PORT || 4000;
-  
-  app.listen(PORT, () => {
-    console.log(`🚀 Server ready at http://localhost:${PORT}${server.graphqlPath}`);
-    console.log(`📱 Allowed origins: ${allowedOrigins.join(', ')}`);
-  });
+// Test database connection function
+async function testDatabaseConnection() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+    
+    // Test a simple query
+    const userCount = await prisma.user.count();
+    console.log(`📊 Database has ${userCount} users`);
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
 }
 
-startServer().catch(error => {
-  console.error('Error starting server:', error);
+// Start server function
+async function startServer() {
+  try {
+    console.log('🚀 Starting server...');
+    console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+    console.log('🔗 Port:', process.env.PORT || 4000);
+    
+    // Test database connection first
+    await testDatabaseConnection();
+    
+    // Create Apollo Server
+    const server = new ApolloServer({
+      typeDefs,
+      resolvers,
+      context: ({ req }) => ({
+        prisma,
+      }),
+      cors: {
+        origin: function (origin, callback) {
+          console.log('🌐 CORS Origin check:', origin);
+          
+          // Allow requests with no origin (mobile apps, server-to-server)
+          if (!origin) {
+            console.log('✅ No origin - allowing request');
+            return callback(null, true);
+          }
+          
+          // Check if origin is allowed
+          if (allowedOrigins.includes(origin)) {
+            console.log('✅ Origin allowed:', origin);
+            callback(null, true);
+          } else {
+            console.log('❌ Origin blocked:', origin);
+            console.log('📋 Allowed origins:', allowedOrigins);
+            callback(null, false);
+          }
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+          'Origin',
+          'X-Requested-With',
+          'Content-Type',
+          'Accept',
+          'Authorization',
+          'Apollo-Require-Preflight'
+        ]
+      },
+      introspection: true,
+      playground: process.env.NODE_ENV !== 'production',
+      formatError: (err) => {
+        console.error('GraphQL Error:', err);
+        return {
+          message: err.message,
+          locations: err.locations,
+          path: err.path,
+        };
+      },
+    });
+
+    // Start the server
+    const { url } = await server.listen({ 
+      port: process.env.PORT || 4000,
+      host: '0.0.0.0' // Important for Render deployment
+    });
+    
+    console.log('🎉 Server ready at:', url);
+    console.log('📱 Allowed origins:', allowedOrigins.join(', '));
+    console.log('🔧 GraphQL Playground:', process.env.NODE_ENV !== 'production' ? 'enabled' : 'disabled');
+    
+  } catch (error) {
+    console.error('💥 Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Start the server
+startServer();
