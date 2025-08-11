@@ -8,6 +8,7 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { GET_USER_BY_EMAIL } from './graphql/queries';
 import AuthButtons from './components/AuthButtons';
 
+
 const CREATE_USER_IF_NOT_EXISTS = gql`
   mutation CreateUserIfNotExists($name: String!, $email: String!) {
     createUserIfNotExists(name: $name, email: $email) {
