@@ -1,9 +1,18 @@
 require('dotenv').config();
 const { ApolloServer, gql } = require('apollo-server');
+const { startStandaloneServer } = require('@apollo/server/standalone');
 const { PrismaClient } = require('@prisma/client');
 const { subDays } = require('date-fns');
+const prisma = require('./prismaClient'); 
+const typeDefs = require('./schema');     
+const resolvers = require('./resolvers');
 
 const prisma = new PrismaClient();
+
+const allowedOrigins = [
+  'http://localhost:3000',                   // local dev
+  'https://caresync-attendance.onrender.com' // production frontend
+];
 
 // GraphQL schema
 const typeDefs = gql`
@@ -237,15 +246,18 @@ updateSetting: async (_, { name, value }) => {
 };
 
 // Start Apollo Server
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  context: ({ req }) => ({
-    prisma,
-    // You can pass other context like auth user here
-  }),
-});
+(async () => {
+  const { url } = await startStandaloneServer(server, {
+    listen: { port: process.env.PORT || 4000 },
+    context: async ({ req }) => ({
+      prisma,
+      // you can pass auth-related context here
+    }),
+    cors: {
+      origin: allowedOrigins,
+      credentials: true
+    }
+  });
 
-server.listen().then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`);
-});
+})();
