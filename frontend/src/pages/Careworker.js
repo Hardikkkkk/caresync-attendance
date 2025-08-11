@@ -121,8 +121,29 @@ function Careworker() {
   const [currentShiftId, setCurrentShiftId] = useState(null);
   const [loadingClock, setLoadingClock] = useState(false);
 
+  useEffect(() => {
+  localStorage.setItem('clockedIn', clockedIn ? 'true' : 'false');
+
+  if (currentShiftId) {
+    localStorage.setItem('currentShiftId', currentShiftId);
+  } else {
+    localStorage.removeItem('currentShiftId');
+  }
+}, [clockedIn, currentShiftId]);
+
   // Update time every second
   useEffect(() => {
+      const savedClockedIn = localStorage.getItem('clockedIn');
+  const savedShiftId = localStorage.getItem('currentShiftId');
+
+  if (savedClockedIn === 'true') {
+    setClockedIn(true);
+  }
+
+  if (savedShiftId) {
+    setCurrentShiftId(savedShiftId);
+  }
+    
     const timer = setInterval(() => {
       setCurrentTime(new Date());
       const now = new Date();

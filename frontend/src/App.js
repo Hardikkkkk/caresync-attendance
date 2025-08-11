@@ -34,6 +34,7 @@ function App() {
       .then(() => {
         console.log("✅ User created in backend");
         setHasCreatedUser(true);
+        Navigate('/dashboard');
       })
       .catch((err) => console.error("❌ User creation error:", err));
   }, [isLoading, isAuthenticated, user, hasCreatedUser, createUserIfNotExists]);
