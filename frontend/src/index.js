@@ -10,8 +10,8 @@ import 'antd/dist/reset.css';
 
 import { Auth0Provider } from '@auth0/auth0-react';
 
-const domain = "YOUR_AUTH0_DOMAIN";
-const clientId = "YOUR_AUTH0_CLIENT_ID";
+const domain = "dev-ngnpvc0padsjdq7n.us.auth0.com";
+const clientId = "hlUGeS9Vpq8eEQPp0mqCGWc1x5bdS5hr";
 
 const theme = {
   global: {
