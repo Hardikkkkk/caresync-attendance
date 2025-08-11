@@ -7,7 +7,7 @@
     "@auth0/auth0-react": "^2.4.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.4",
-    "@testing-library/react": "^16.3.0",
+    "@testing-library/react": "^12.1.5",
     "@testing-library/user-event": "^13.5.0",
     "antd": "^5.26.7",
     "auth0-react": "^3.1.0",
