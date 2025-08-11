@@ -27,7 +27,7 @@ function ClockForm({ onClock, isClockingIn, clockedIn }) {
         const hospitalLong = 73.8567;
         const dist = distance(latitude, longitude, hospitalLat, hospitalLong);
 
-        if (dist > 100) {
+        if (dist > 300) {
           message.error('You are outside the allowed perimeter to clock in/out.');
           setLoading(false);
           return;
