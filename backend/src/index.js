@@ -1,15 +1,36 @@
 require('dotenv').config();
-const { ApolloServer, gql } = require('apollo-server');
+const express = require('express');
+const cors = require('cors');
+const { ApolloServer, gql } = require('apollo-server-express');
 const { PrismaClient } = require('@prisma/client');
 const { subDays } = require('date-fns');
 
-
 const prisma = new PrismaClient();
+const app = express();
 
 const allowedOrigins = [
-  'http://localhost:3000',                   // local dev
-  'https://caresync-attendance.onrender.com' // production frontend
+  'http://localhost:3000',
+  'https://caresync-attendance.onrender.com'
 ];
+
+// ✅ Configure CORS middleware
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true
+  })
+);
+
+// ✅ Handle OPTIONS preflight
+app.options('*', cors());
 
 // GraphQL schema
 const typeDefs = gql`
@@ -31,8 +52,8 @@ const typeDefs = gql`
   }
 
   type DailyClockIn {
-  date: String!
-  count: Int!
+    date: String!
+    count: Int!
   }
 
   type StaffStats {
@@ -44,9 +65,9 @@ const typeDefs = gql`
   }
 
   type Setting {
-  id: Int!
-  name: String!
-  value: String!
+    id: Int!
+    name: String!
+    value: String!
   }
 
   type Query {
@@ -70,13 +91,12 @@ const typeDefs = gql`
   }
 
   type TodayClockIn {
-  user: User
-  clockInTime: String
-  clockOutTime: String
-  latitude: Float
-  longitude: Float
+    user: User
+    clockInTime: String
+    clockOutTime: String
+    latitude: Float
+    longitude: Float
   }
-
 `;
 
 const resolvers = {
@@ -102,40 +122,34 @@ const resolvers = {
         },
       });
 
-      const clockedInUsers = users.filter(user => {
+      return users.filter(user => {
         const todayEvents = user.clockEvents;
         return todayEvents.length > 0 && todayEvents[0].type === 'IN';
       });
-
-      return clockedInUsers;
     },
 
-dailyClockInCount: async (_, __, { prisma }) => {
-  const result = await prisma.$queryRaw`
-    SELECT 
-      TO_CHAR((timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD') AS date,
-      COUNT(DISTINCT "userId")::int AS count
-    FROM "ClockEvent"
-    WHERE type = 'IN'
-      AND (timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') >= (CURRENT_DATE - interval '6 days')
-    GROUP BY date
-    ORDER BY date DESC;
-  `;
+    dailyClockInCount: async (_, __, { prisma }) => {
+      const result = await prisma.$queryRaw`
+        SELECT 
+          TO_CHAR((timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::date, 'YYYY-MM-DD') AS date,
+          COUNT(DISTINCT "userId")::int AS count
+        FROM "ClockEvent"
+        WHERE type = 'IN'
+          AND (timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata') >= (CURRENT_DATE - interval '6 days')
+        GROUP BY date
+        ORDER BY date DESC;
+      `;
 
-  // Reverse to show oldest first
-  return result.map(r => ({
-    date: r.date,
-    count: Number(r.count) // ensure it's an actual JS integer
-  })).reverse();
-},
-
-
+      return result.map(r => ({
+        date: r.date,
+        count: Number(r.count)
+      })).reverse();
+    },
 
     staffClockStats: async () => {
       const users = await prisma.user.findMany();
       const today = new Date();
       const weekAgo = subDays(today, 7);
-
       const stats = [];
 
       for (const user of users) {
@@ -159,7 +173,7 @@ dailyClockInCount: async (_, __, { prisma }) => {
 
             const day = inTime.toISOString().slice(0, 10);
             dailyLogs[day] = (dailyLogs[day] || 0) + hours;
-            i++; // skip next OUT event
+            i++;
           }
         }
 
@@ -167,7 +181,7 @@ dailyClockInCount: async (_, __, { prisma }) => {
           userId: user.id,
           name: user.name,
           totalHoursLastWeek: parseFloat(totalHours.toFixed(2)),
-          avgDailyHours: parseFloat((totalHours / Object.keys(dailyLogs).length || 1).toFixed(2)),
+          avgDailyHours: parseFloat((totalHours / (Object.keys(dailyLogs).length || 1)).toFixed(2)),
           daysPresent: Object.keys(dailyLogs).length,
         });
       }
@@ -175,9 +189,7 @@ dailyClockInCount: async (_, __, { prisma }) => {
       return stats;
     },
 
-    getUserByEmail: async (_, { email }) => {
-      return prisma.user.findUnique({ where: { email } });
-    },
+    getUserByEmail: (_, { email }) => prisma.user.findUnique({ where: { email } }),
   },
 
   Mutation: {
@@ -186,79 +198,69 @@ dailyClockInCount: async (_, __, { prisma }) => {
       if (existingUser) return existingUser;
 
       return prisma.user.create({
-        data: {
-          name,
-          email,
-          role: 'careworker',
-        },
+        data: { name, email, role: 'careworker' },
       });
     },
 
     createUser: (_, args) => prisma.user.create({ data: args }),
 
-    updateUserRole: async (_, { userId, role }) => {
-    return prisma.user.update({
-    where: { id: userId },
-    data: { role },
-    });
-  },
+    updateUserRole: (_, { userId, role }) =>
+      prisma.user.update({
+        where: { id: userId },
+        data: { role },
+      }),
 
     deleteUser: async (_, { userId }) => {
-    await prisma.user.delete({ where: { id: userId } });
-    return true;
-  },
+      await prisma.user.delete({ where: { id: userId } });
+      return true;
+    },
 
     clockIn: (_, { userId, note, latitude, longitude }) =>
       prisma.clockEvent.create({
         data: { userId, note, type: 'IN', latitude, longitude },
       }),
 
-clockOut: async (_, { userId, note, latitude, longitude }) => {
-  console.log(">>> clockOut resolver called with:", { userId, note, latitude, longitude });
+    clockOut: async (_, { userId, note, latitude, longitude }) => {
+      console.log(">>> clockOut resolver called:", { userId, note, latitude, longitude });
+      try {
+        const result = await prisma.clockEvent.create({
+          data: { userId, note, type: 'OUT', latitude, longitude },
+        });
+        console.log(">>> Clock out success:", result);
+        return result;
+      } catch (error) {
+        console.error("❌ Error during clockOut:", error);
+        throw new Error("Failed to clock out.");
+      }
+    },
 
-  try {
-    const result = await prisma.clockEvent.create({
-      data: { userId, note, type: 'OUT', latitude, longitude },
-    });
-    console.log(">>> Clock out success:", result);
-    return result;
-  } catch (error) {
-    console.error("❌ Error during clockOut:", error);
-    throw new Error("Failed to clock out.");
-  }
-},
-updateSetting: async (_, { name, value }) => {
-    return prisma.setting.upsert({
-      where: { name },
-      update: { value },
-      create: { name, value },
-    });
-  },
-
+    updateSetting: (_, { name, value }) =>
+      prisma.setting.upsert({
+        where: { name },
+        update: { value },
+        create: { name, value },
+      }),
   },
 
   ClockEvent: {
-    user: (parent) => prisma.user.findUnique({ where: { id: parent.userId } }),
+    user: parent => prisma.user.findUnique({ where: { id: parent.userId } }),
   },
 };
 
-// Start Apollo Server
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  context: ({ req }) => ({
-    prisma,
-    // You can pass other context like auth user here
-  }),
-  cors: {
-    origin: [
-      'http://localhost:3000',                   // local dev
-      'https://caresync-attendance.onrender.com' // production frontend
-    ],
-    credentials: true
-  }
-});
+async function startServer() {
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    context: ({ req }) => ({ prisma }),
+  });
 
-server.listen({ port: process.env.PORT || 4000 }).then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`);
-});
+  await server.start();
+  server.applyMiddleware({ app, cors: false }); // disable Apollo's own CORS
+
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server ready at http://localhost:${PORT}${server.graphqlPath}`);
+  });
+}
+
+startServer();
