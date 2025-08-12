@@ -159,4 +159,4 @@ npm start
 ## 9. Author
 
 **Hardik Bhondve**  
-Full Stack Developer Intern Candidate
+
