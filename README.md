@@ -2,6 +2,8 @@
 
 A role-based attendance tracking application for healthcare organizations, enabling careworkers to clock in/out of shifts with geolocation validation and allowing managers to monitor attendance through dashboards and analytics.
 
+NOTE: FOR MANAGER ACCESS, email: hardikb@mail.com
+                          pass: Hardik@123
 
 ---
 
