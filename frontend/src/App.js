@@ -1,13 +1,51 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
-import Careworker from './pages/Careworker';
-import ManagerDashboard from './pages/ManagerDashboard';
-import AuthPage from './components/AuthPage';  // new AuthPage component
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Box, Spinner } from 'grommet';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useQuery, useMutation, gql } from '@apollo/client';
-import { GET_USER_BY_EMAIL } from './graphql/queries';
-import AuthButtons from './components/AuthButtons';
+import { useMutation, gql } from '@apollo/client';
+import AppHeader from './components/AppHeader';
+import useSmoothScroll from './hooks/useSmoothScroll';
+import CustomCursor from './components/CustomCursor';
 
+// Each page is its own chunk, so the heavy code (three.js on Home, charts on the
+// manager page) is only downloaded when that page is actually shown.
+const loadHome = () => import('./pages/Home');
+const loadCareworker = () => import('./pages/Careworker');
+const loadManager = () => import('./pages/ManagerDashboard');
+const Home = lazy(loadHome);
+const Careworker = lazy(loadCareworker);
+const ManagerDashboard = lazy(loadManager);
+
+// Start downloading the right page while Auth0 is still checking the session,
+// instead of waiting for it. Auth0 keeps its cache in localStorage (see index.js).
+const looksLoggedIn = () => {
+  try {
+    return Object.keys(localStorage).some((k) => k.startsWith('@@auth0spajs@@'));
+  } catch (e) {
+    return false;
+  }
+};
+if (looksLoggedIn()) loadCareworker();
+else loadHome();
+
+// Remember the user record so a returning user sees the app instantly.
+// It is refreshed from the server on every load, and the backend still
+// enforces roles, so this is only a speed-up.
+const CACHE_KEY = 'caresync:user';
+const readCachedUser = (email) => {
+  try {
+    const u = JSON.parse(localStorage.getItem(CACHE_KEY));
+    return u && u.email === email ? u : null;
+  } catch (e) {
+    return null;
+  }
+};
+const writeCachedUser = (u) => {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(u)); } catch (e) { /* storage unavailable */ }
+};
+const clearCachedUser = () => {
+  try { localStorage.removeItem(CACHE_KEY); } catch (e) { /* storage unavailable */ }
+};
 
 const CREATE_USER_IF_NOT_EXISTS = gql`
   mutation CreateUserIfNotExists($name: String!, $email: String!) {
@@ -20,77 +58,101 @@ const CREATE_USER_IF_NOT_EXISTS = gql`
   }
 `;
 
-function App() {
+function Splash() {
+  return (
+    <Box fill align="center" justify="center" style={{ minHeight: '100vh' }}>
+      <Spinner color="#1c7c7d" size="medium" />
+    </Box>
+  );
+}
+
+function AppRoutes() {
   const { user, isAuthenticated, isLoading } = useAuth0();
   const [createUserIfNotExists] = useMutation(CREATE_USER_IF_NOT_EXISTS);
-  const [hasCreatedUser, setHasCreatedUser] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [syncError, setSyncError] = useState(null);
+  const syncStarted = useRef(false);
 
-  // Create user in backend immediately after login/signup
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !user?.email || hasCreatedUser) return;
+    if (!isLoading && !isAuthenticated) clearCachedUser();
+  }, [isLoading, isAuthenticated]);
+
+  // One request after login: create the user if new, or return the existing one.
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user?.email || syncStarted.current) return;
+    syncStarted.current = true;
+
+    // Show the app straight away from the cache, then refresh from the server
+    const cached = readCachedUser(user.email);
+    if (cached) setLoggedInUser(cached);
 
     const name = user.name || user.nickname || user.email;
 
     createUserIfNotExists({ variables: { name, email: user.email } })
-      .then(() => {
-        console.log("✅ User created in backend");
-        setHasCreatedUser(true);
-        Navigate('/dashboard');
+      .then(({ data }) => {
+        setLoggedInUser(data.createUserIfNotExists);
+        writeCachedUser(data.createUserIfNotExists);
       })
-      .catch((err) => console.error("❌ User creation error:", err));
-  }, [isLoading, isAuthenticated, user, hasCreatedUser, createUserIfNotExists]);
+      .catch((err) => {
+        console.error('User sync error:', err);
+        syncStarted.current = false;
+        setSyncError(err);
+      });
+  }, [isLoading, isAuthenticated, user, createUserIfNotExists]);
 
-  const { data: userData, loading: userDataLoading } = useQuery(GET_USER_BY_EMAIL, {
-    variables: { email: user?.email },
-    skip: !user?.email,
-    fetchPolicy: "network-only" // ensures fresh data after creation
-  });
-
-  if (isLoading || userDataLoading) {
-    return <div style={{ padding: 20 }}>Loading...</div>;
+  // Auth0 is still checking the session, or we are waiting for the user record
+  if (isLoading || (isAuthenticated && !loggedInUser && !syncError)) {
+    return <Splash />;
   }
 
   if (!isAuthenticated) {
-    // Show the new custom login/signup page here
-    return <AuthPage />;
+    return (
+      <Suspense fallback={<Splash />}>
+        <Home />
+      </Suspense>
+    );
   }
 
-  const loggedInUser = userData?.getUserByEmail;
-
-  if (!loggedInUser) {
+  if (syncError && !loggedInUser) {
     return (
       <div style={{ padding: 20 }}>
-        Creating your account... please wait.
+        <p>We couldn't load your account. Check your connection and try again.</p>
+        <button type="button" onClick={() => window.location.reload()}>
+          Try again
+        </button>
       </div>
     );
   }
 
-  console.log("Fetched user from backend:", loggedInUser);
-
   return (
     <Router>
-      <AuthButtons />
-      <div style={{ padding: 16 }}>
-        <Link to="/">Home</Link>{' '}
-        {loggedInUser.role === 'manager' && (
-          <Link to="/manager" style={{ marginLeft: '1rem' }}>
-            Manager Dashboard
-          </Link>
-        )}
-      </div>
+      <AppHeader user={loggedInUser} />
 
-      <Routes>
-        <Route path="/" element={<Careworker user={loggedInUser} />} />
-        <Route
-          path="/manager"
-          element={
-            loggedInUser.role === 'manager'
-              ? <ManagerDashboard user={loggedInUser} />
-              : <Navigate to="/" replace />
-          }
-        />
-      </Routes>
+      <Suspense fallback={<Splash />}>
+        <Routes>
+          <Route path="/" element={<Careworker user={loggedInUser} />} />
+          <Route
+            path="/manager"
+            element={
+              loggedInUser.role === 'manager'
+                ? <ManagerDashboard user={loggedInUser} />
+                : <Navigate to="/" replace />
+            }
+          />
+        </Routes>
+      </Suspense>
     </Router>
+  );
+}
+
+// Smooth scrolling and the custom cursor are mounted once, for every screen
+function App() {
+  useSmoothScroll();
+  return (
+    <>
+      <CustomCursor />
+      <AppRoutes />
+    </>
   );
 }
 

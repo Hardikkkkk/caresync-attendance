@@ -1,0 +1,10 @@
+@"
+.env
+.env.*
+!.env.example
+node_modules/
+build/
+.vscode/
+~`$*
+backend/backup.sql
+"@ | Set-Content -Encoding utf8 .gitignore

@@ -1,586 +1,320 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Heading,
-  Card,
-  ResponsiveContext,
-  Text,
-  Avatar,
-  Grid
-} from 'grommet';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { useAuth0 } from '@auth0/auth0-react';
-import { message, Tag } from 'antd';
-import {
-  UserOutlined,
-  HeartOutlined,
-  ClockCircleOutlined,
-  MedicineBoxOutlined,
-  PlusCircleOutlined
-} from '@ant-design/icons';
+import { message } from 'antd';
+import { UserOutlined, EnvironmentOutlined, CheckOutlined } from '@ant-design/icons';
 import { CLOCK_IN, CLOCK_OUT, GET_USER_BY_EMAIL } from '../graphql/queries';
 import { USER_EVENTS } from '../graphql/managerQueries';
 import ClockForm from '../components/ClockForm';
-import StaffHistoryTable from '../components/StaffHistoryTable';
+import StaffHistoryTable, { parseToDate, isClockInEvent } from '../components/StaffHistoryTable';
+import { useLang } from '../i18n/LanguageContext';
+import './Careworker.css';
 
-// Healthcare-themed navbar component
-const CareNavbar = () => (
-  <div style={{
-    background: 'linear-gradient(135deg, #0066cc 0%, #004499 100%)',
-    padding: '1rem 2rem',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1000
-  }}>
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          background: 'white',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          animation: 'pulse 2s infinite'
-        }}>
-          <HeartOutlined style={{ color: '#0066cc', fontSize: '20px' }} />
-        </div>
-        <h1 style={{
-          color: 'white',
-          margin: 0,
-          fontSize: '28px',
-          fontWeight: '700',
-          letterSpacing: '-0.5px'
-        }}>
-          CareSync
-        </h1>
-      </div>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
-        color: 'white'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MedicineBoxOutlined style={{ fontSize: '16px' }} />
-          <span style={{ fontSize: '14px', fontWeight: '500' }}>Healthcare Dashboard</span>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-// Floating healthcare icons animation
-const FloatingIcons = () => (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    pointerEvents: 'none',
-    zIndex: -1,
-    overflow: 'hidden'
-  }}>
-    {[...Array(6)].map((_, i) => (
-      <div
-        key={i}
-        style={{
-          position: 'absolute',
-          color: 'rgba(0, 102, 204, 0.08)',
-          fontSize: '60px',
-          animation: `float ${15 + i * 2}s infinite linear`,
-          animationDelay: `${i * 3}s`,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`
-        }}
-      >
-        {i % 3 === 0 ? <HeartOutlined /> : i % 3 === 1 ? <PlusCircleOutlined /> : <MedicineBoxOutlined />}
-      </div>
-    ))}
-  </div>
-);
-
-function Careworker() {
-  const { user: auth0User, isAuthenticated } = useAuth0();
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [shiftProgress, setShiftProgress] = useState(0);
-  const [clockedIn, setClockedIn] = useState(false);
-  const [currentShiftId, setCurrentShiftId] = useState(null);
-  const [loadingClock, setLoadingClock] = useState(false);
+// Own component so the ticking clock does not re-render the whole page.
+function LiveClock() {
+  const { locale } = useLang();
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-  localStorage.setItem('clockedIn', clockedIn ? 'true' : 'false');
-
-  if (currentShiftId) {
-    localStorage.setItem('currentShiftId', currentShiftId);
-  } else {
-    localStorage.removeItem('currentShiftId');
-  }
-}, [clockedIn, currentShiftId]);
-
-  // Update time every second
-  useEffect(() => {
-      const savedClockedIn = localStorage.getItem('clockedIn');
-  const savedShiftId = localStorage.getItem('currentShiftId');
-
-  if (savedClockedIn === 'true') {
-    setClockedIn(true);
-  }
-
-  if (savedShiftId) {
-    setCurrentShiftId(savedShiftId);
-  }
-    
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-      const now = new Date();
-      const startHour = 8;
-      const endHour = 20;
-      const currentHour = now.getHours() + now.getMinutes() / 60;
-      const progress = Math.max(
-        0,
-        Math.min(100, ((currentHour - startHour) / (endHour - startHour)) * 100)
-      );
-      setShiftProgress(progress);
-    }, 1000);
-
+    const timer = setInterval(() => setNow(new Date()), 15000);
     return () => clearInterval(timer);
   }, []);
 
-  // Get logged-in user from DB
+  return (
+    <div className="cw-clock">
+      <svg className="cw-tick" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="21" />
+        <g className="cw-hand"><line x1="24" y1="24" x2="24" y2="8" /></g>
+        <circle cx="24" cy="24" r="2.5" className="cw-hub" />
+      </svg>
+      <div>
+        <div className="cw-clock-time">
+          {now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <div className="cw-clock-date">
+          {now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// "On shift for 3h 12m"
+function ShiftTimer({ since }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const mins = Math.max(0, Math.floor((now - since.getTime()) / 60000));
+  return <span className="cw-timer">{Math.floor(mins / 60)}h {String(mins % 60).padStart(2, '0')}m</span>;
+}
+
+const sameDay = (a, b) =>
+  a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+function firstNameOf(name) {
+  const raw = String(name || '').split('@')[0].split(/[._\s-]/)[0].replace(/\d+/g, '');
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : '';
+}
+
+function Careworker({ user: appUser }) {
+  const { t, locale } = useLang();
+  const { user: auth0User, isAuthenticated } = useAuth0();
+  const [clockedIn, setClockedIn] = useState(false);
+  const [loadingClock, setLoadingClock] = useState(false);
+  const [shiftStart, setShiftStart] = useState(null);
+  const [flash, setFlash] = useState(null); // 'in' | 'out' success animation
+
+  // App.js already loads the user and passes it in. Only query as a fallback.
   const { data, loading, error } = useQuery(GET_USER_BY_EMAIL, {
     variables: { email: auth0User?.email },
-    skip: !auth0User?.email,
-    errorPolicy: 'all' // Handle partial errors gracefully
-  });
-
-  const [clockIn] = useMutation(CLOCK_IN, {
+    skip: !!appUser || !auth0User?.email,
     errorPolicy: 'all',
-    onError: (error) => {
-      console.error("Clock-in mutation error:", error);
-      message.error(`Clock in failed: ${error.message}`);
-      setLoadingClock(false);
-    }
   });
 
-  const [clockOut] = useMutation(CLOCK_OUT, {
-    errorPolicy: 'all',
-    onError: (error) => {
-      console.error("Clock-out mutation error:", error);
-      message.error(`Clock out failed: ${error.message}`);
-      setLoadingClock(false);
-    }
-  });
+  const [clockIn] = useMutation(CLOCK_IN);
+  const [clockOut] = useMutation(CLOCK_OUT);
 
-  const user = data?.getUserByEmail;
-  const userId = user?.id ? parseInt(user.id) : null;
+  const user = appUser || data?.getUserByEmail;
+  const userId = user?.id ? parseInt(user.id, 10) : null;
 
-  // Fetch active shift on login
-  const { data: eventsData, refetch: refetchEvents } = useQuery(USER_EVENTS, {
+  // Work out the current shift state from the newest event the server returned
+  const applyEvents = (result) => {
+    const list = result?.userEvents || result?.clockEvents || [];
+    const time = (e) => parseToDate(e.timestamp)?.getTime() || 0;
+    const latest = list.slice().sort((a, b) => time(b) - time(a))[0];
+    if (process.env.NODE_ENV !== 'production') console.debug('Latest clock event:', latest);
+    const active = Boolean(latest && isClockInEvent(latest) && !latest.clockOutTime);
+    setClockedIn(active);
+    setShiftStart(active ? parseToDate(latest.timestamp) : null);
+  };
+
+  // Server is the source of truth for whether a shift is active
+  const { data: evData, loading: eventsLoading, refetch: refetchEvents } = useQuery(USER_EVENTS, {
     variables: { userId },
     skip: !userId,
-    fetchPolicy: "network-only",
+    fetchPolicy: 'network-only',
     errorPolicy: 'all',
-    onCompleted: (data) => {
-      console.log("Events data received:", data);
-      if (data?.userEvents?.length > 0) {
-        const latestEvent = data.userEvents[0];
-        console.log("Latest event:", latestEvent);
-        if (latestEvent.type === "CLOCK_IN" && !latestEvent.clockOutTime) {
-          setClockedIn(true);
-          setCurrentShiftId(latestEvent.id);
-        } else {
-          setClockedIn(false);
-          setCurrentShiftId(null);
-        }
-      } else {
-        setClockedIn(false);
-        setCurrentShiftId(null);
-      }
-    },
-    onError: (error) => {
-      console.error("Error fetching events:", error);
-    }
+    onCompleted: applyEvents,
+    onError: (err) => console.error('Error fetching events:', err),
   });
 
-  // Run refetch when userId changes (e.g., after login)
+  // Success animation lasts a couple of seconds
   useEffect(() => {
-    if (userId) {
-      console.log("Refetching events for userId:", userId);
-      refetchEvents();
-    }
-  }, [userId, refetchEvents]);
+    if (!flash) return undefined;
+    const id = setTimeout(() => setFlash(null), 2300);
+    return () => clearTimeout(id);
+  }, [flash]);
 
-  // Handle Clock In with proper error handling and loading state
+  // Mon-Sun strip: which days this week had a clock-in
+  const week = useMemo(() => {
+    const events = evData?.userEvents || [];
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + i);
+      return {
+        day,
+        isToday: sameDay(day, today),
+        worked: events.some((e) => e.type === 'CLOCK_IN' && sameDay(parseToDate(e.timestamp), day)),
+      };
+    });
+  }, [evData]);
+
   const handleClockIn = async ({ latitude, longitude, note }) => {
-    console.log("Handle Clock In called with:", { latitude, longitude, note, userId });
-    
     if (!userId) {
-      message.error("User ID not loaded yet. Please wait a moment.");
-      return;
+      message.error(t('msg.userNotLoaded'));
+      return false;
     }
-    
     if (clockedIn) {
-      message.warning("You're already clocked in!");
-      return;
+      message.warning(t('msg.alreadyIn'));
+      return false;
     }
 
     setLoadingClock(true);
-    
     try {
-      console.log("Attempting to clock in with mutation...");
-      const result = await clockIn({
+      await clockIn({
         variables: {
-          userId: parseInt(userId), // Ensure it's an integer
+          userId,
           latitude: latitude ?? null,
           longitude: longitude ?? null,
-          note: note ?? ""
-        }
+          note: note ?? '',
+        },
       });
-      
-      console.log("Clock in result:", result);
-      
-      // Update local state immediately
       setClockedIn(true);
-      if (result.data?.clockIn?.id) {
-        setCurrentShiftId(result.data.clockIn.id);
-      }
-      
-      // Refresh events data
-      await refetchEvents();
-      
-      message.success("Successfully clocked in!");
+      setShiftStart(new Date());
+      setFlash('in');
+      applyEvents((await refetchEvents())?.data);
+      return true;
     } catch (e) {
-      console.error("Clock-in error:", e);
-      // More detailed error message
-      const errorMessage = e.graphQLErrors?.[0]?.message || e.message || "Unknown error occurred";
-      message.error(`Clock in failed: ${errorMessage}`);
+      const errorMessage = e.graphQLErrors?.[0]?.message || e.message || 'Unknown error occurred';
+      message.error(t('msg.clockInFailed', { e: errorMessage }));
+      return false;
     } finally {
       setLoadingClock(false);
     }
   };
 
-  // Handle Clock Out with proper error handling and loading state
   const handleClockOut = async ({ latitude, longitude, note }) => {
-    console.log("Handle Clock Out called with:", { latitude, longitude, note, userId });
-    
     if (!userId) {
-      message.error("User ID not loaded yet. Please wait a moment.");
-      return;
+      message.error(t('msg.userNotLoaded'));
+      return false;
     }
-    
     if (!clockedIn) {
-      message.warning("You're not currently clocked in!");
-      return;
+      message.warning(t('msg.notIn'));
+      return false;
     }
 
     setLoadingClock(true);
-    
     try {
-      console.log("Attempting to clock out with mutation...");
-      const result = await clockOut({
+      await clockOut({
         variables: {
-          userId: parseInt(userId), // Ensure it's an integer
+          userId,
           latitude: latitude ?? null,
           longitude: longitude ?? null,
-          note: note ?? ""
-        }
+          note: note ?? '',
+        },
       });
-      
-      console.log("Clock out result:", result);
-      
-      // Update local state immediately
       setClockedIn(false);
-      setCurrentShiftId(null);
-      
-      // Refresh events data
-      await refetchEvents();
-      
-      message.success("Shift completed successfully!");
+      setShiftStart(null);
+      setFlash('out');
+      applyEvents((await refetchEvents())?.data);
+      return true;
     } catch (e) {
-      console.error("Clock-out error:", e);
-      // More detailed error message
-      const errorMessage = e.graphQLErrors?.[0]?.message || e.message || "Unknown error occurred";
-      message.error(`Clock out failed: ${errorMessage}`);
+      const errorMessage = e.graphQLErrors?.[0]?.message || e.message || 'Unknown error occurred';
+      message.error(t('msg.clockOutFailed', { e: errorMessage }));
+      return false;
     } finally {
       setLoadingClock(false);
     }
   };
 
   if (!isAuthenticated) return <div>Please log in</div>;
-  if (loading) return <div>Loading user data...</div>;
-  if (error) {
-    console.error("User query error:", error);
-    return <div>Error loading user data: {error.message}</div>;
-  }
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+  if (error) return <div style={{ padding: 20 }}>Error loading user data: {error.message}</div>;
+
+  // New text falls back to English until the keys are added to translations.js
+  const tr = (key, fallback) => {
+    const v = t(key);
+    return v && v !== key ? v : fallback;
+  };
+
+  const busy = loadingClock || eventsLoading;
+  const statusClass = eventsLoading ? 'is-checking' : clockedIn ? 'is-in' : 'is-out';
+  const statusLabel = eventsLoading ? t('cw.checking') : clockedIn ? t('cw.in') : t('cw.out');
+  const displayName = user?.name || auth0User?.name || auth0User?.email;
+
+  const hour = new Date().getHours();
+  const tod = hour < 12 ? 'morning' : hour < 17 ? 'day' : 'evening';
+  const greeting = tr(`cw.greet.${tod}`, { morning: 'Good morning', day: 'Good afternoon', evening: 'Good evening' }[tod]);
+  const first = firstNameOf(displayName);
+  const daysWorked = week.filter((d) => d.worked).length;
 
   return (
-    <>
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-        
-        @keyframes float {
-          from { transform: translate(0, 100vh) rotate(0deg); }
-          to { transform: translate(0, -100px) rotate(360deg); }
-        }
-        
-        @keyframes slideInUp {
-          from { 
-            opacity: 0; 
-            transform: translateY(30px); 
-          }
-          to { 
-            opacity: 1; 
-            transform: translateY(0); 
-          }
-        }
-        
-        .healthcare-card {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 8px 32px rgba(0, 102, 204, 0.12);
-          border: 1px solid rgba(0, 102, 204, 0.1);
-          transition: all 0.3s ease;
-          animation: slideInUp 0.6s ease-out;
-        }
-        
-        .healthcare-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 48px rgba(0, 102, 204, 0.2);
-        }
-        
-        .clock-in-card {
-          background: linear-gradient(135deg, #e8f5e8 0%, #f0fff0 100%);
-          border-left: 4px solid #28a745;
-        }
-        
-        .clock-out-card {
-          background: linear-gradient(135deg, #ffeaea 0%, #fff5f5 100%);
-          border-left: 4px solid #dc3545;
-        }
-        
-        .status-badge-active {
-          background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-          color: white;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
-        }
-        
-        .status-badge-inactive {
-          background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-          color: white;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
-        }
-        
-        .time-display {
-          background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
-          color: white;
-          padding: 16px;
-          border-radius: 12px;
-          text-align: center;
-          box-shadow: 0 4px 16px rgba(0, 102, 204, 0.2);
-        }
-        
-        .user-avatar {
-          background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
-          border: 3px solid white;
-          box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3);
-        }
-        
-        .main-container {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);
-          position: relative;
-        }
-        
-        .content-wrapper {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-        }
-        
-        @media (max-width: 768px) {
-          .content-wrapper {
-            padding: 1rem;
-          }
-          
-          .healthcare-card {
-            margin-bottom: 1rem;
-          }
-        }
-      `}</style>
-      
-      <div className="main-container">
-        <CareNavbar />
-        <FloatingIcons />
+    <div className="cw">
+      <main className="cw-main">
+        <section className={`cw-hero is-${tod}`}>
+          <svg className="cw-hero-ecg" viewBox="0 0 1200 60" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 30 H380 L410 30 L430 8 L455 52 L480 2 L505 47 L525 30 H700 L720 30 L735 18 L750 30 H1200" />
+            <path className="cw-ecg-pulse" pathLength="1" d="M0 30 H380 L410 30 L430 8 L455 52 L480 2 L505 47 L525 30 H700 L720 30 L735 18 L750 30 H1200" />
+          </svg>
+          <span className="cw-plus cw-plus-1" aria-hidden="true" />
+          <span className="cw-plus cw-plus-2" aria-hidden="true" />
 
-        <ResponsiveContext.Consumer>
-          {size => (
-            <div className="content-wrapper">
-
-
-              {/* Header Card */}
-              <div className="healthcare-card" style={{ marginBottom: '2rem', padding: '2rem' }}>
-                <Grid columns={size === 'small' ? ['1fr'] : ['2fr', '1fr']} gap="medium" align="center">
-                  <Box direction="row" gap="medium" align="center">
-                    <div className="user-avatar" style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      color: 'white'
-                    }}>
-                      <UserOutlined />
-                    </div>
-                    <Box>
-                      <Text size="xlarge" weight="bold" style={{ color: '#2c3e50', marginBottom: '4px' }}>
-                        {auth0User?.name}
-                      </Text>
-                      <Text size="medium" style={{ color: '#6c757d', marginBottom: '8px' }}>
-                        {user?.role === 'manager' ? 'Manager' : 'Careworker'} ID: {String(userId).padStart(6, '0')}
-                      </Text>
-                      <div className={clockedIn ? 'status-badge-active' : 'status-badge-inactive'}>
-                        <ClockCircleOutlined style={{ marginRight: '6px' }} />
-                        {clockedIn ? 'Currently Clocked In' : 'Not Clocked In'}
-                      </div>
-                    </Box>
-                  </Box>
-                  <Box align={size === 'small' ? 'start' : 'end'} style={{ marginTop: size === 'small' ? '1rem' : '0' }}>
-                    <div className="time-display">
-                      <Text size="large" weight="bold" style={{ display: 'block', marginBottom: '4px' }}>
-                        {currentTime.toLocaleTimeString()}
-                      </Text>
-                      <Text size="medium">
-                        {currentTime.toLocaleDateString()}
-                      </Text>
-                    </div>
-                  </Box>
-                </Grid>
-              </div>
-
-              {/* Clock In / Clock Out Cards */}
-              <Box direction={size === 'small' ? 'column' : 'row'} gap="large" style={{ marginBottom: '3rem' }}>
-                {/* Clock In Card */}
-                <div className="healthcare-card clock-in-card" style={{ flex: 1, padding: '2rem' }}>
-                  <Box align="center" style={{ marginBottom: '1.5rem' }}>
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      background: '#28a745',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '1rem',
-                      boxShadow: '0 4px 16px rgba(40, 167, 69, 0.3)'
-                    }}>
-                      <ClockCircleOutlined style={{ color: 'white', fontSize: '24px' }} />
-                    </div>
-                    <Heading level={3} margin="none" style={{ color: '#28a745', textAlign: 'center' }}>
-                      Start Your Shift
-                    </Heading>
-                    <Text size="small" style={{ color: '#6c757d', textAlign: 'center', marginTop: '0.5rem' }}>
-                      Begin caring for patients
-                    </Text>
-                  </Box>
-                  <ClockForm
-                    onClock={handleClockIn}
-                    isClockingIn={true}
-                    clockedIn={clockedIn}
-                    disabled={clockedIn || loadingClock}
-                    loading={loadingClock}
-                  />
-                </div>
-
-                {/* Clock Out Card */}
-                <div className="healthcare-card clock-out-card" style={{ flex: 1, padding: '2rem' }}>
-                  <Box align="center" style={{ marginBottom: '1.5rem' }}>
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      background: '#dc3545',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '1rem',
-                      boxShadow: '0 4px 16px rgba(220, 53, 69, 0.3)'
-                    }}>
-                      <ClockCircleOutlined style={{ color: 'white', fontSize: '24px' }} />
-                    </div>
-                    <Heading level={3} margin="none" style={{ color: '#dc3545', textAlign: 'center' }}>
-                      End Your Shift
-                    </Heading>
-                    <Text size="small" style={{ color: '#6c757d', textAlign: 'center', marginTop: '0.5rem' }}>
-                      Complete your day safely
-                    </Text>
-                  </Box>
-                  <ClockForm
-                    onClock={handleClockOut}
-                    isClockingIn={false}
-                    clockedIn={clockedIn}
-                    disabled={!clockedIn || loadingClock}
-                    loading={loadingClock}
-                  />
-                </div>
-              </Box>
-
-              {/* History Section */}
-              <div className="healthcare-card" style={{ padding: '2rem' }}>
-                <Box direction="row" align="center" gap="medium" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    background: 'linear-gradient(135deg, #0066cc 0%, #004499 100%)',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <MedicineBoxOutlined style={{ color: 'white', fontSize: '20px' }} />
-                  </div>
-                  <Box>
-                    <Heading level={4} margin="none" style={{ color: '#2c3e50' }}>
-                      My Clock-In/Out History
-                    </Heading>
-                    <Text size="small" style={{ color: '#6c757d' }}>
-                      Track your healthcare shifts and attendance
-                    </Text>
-                  </Box>
-                </Box>
-                <StaffHistoryTable userId={userId} />
-              </div>
+          <div className="cw-who">
+            <div className={`cw-avatar ${statusClass}`} aria-hidden="true">
+              <UserOutlined />
             </div>
-          )}
-        </ResponsiveContext.Consumer>
-      </div>
-    </>
+            <div className="cw-id">
+              <h1>{greeting}{first ? `, ${first}` : ''}</h1>
+              <p>
+                {user?.role === 'manager' ? t('cw.manager') : t('cw.careworker')} {t('cw.id')}:{' '}
+                {userId ? String(userId).padStart(6, '0') : '-'}
+              </p>
+              <span className={`cw-status ${statusClass}`}>
+                <span className="cw-dot" />
+                {statusLabel}
+                {clockedIn && shiftStart && <ShiftTimer since={shiftStart} />}
+              </span>
+            </div>
+          </div>
+          <LiveClock />
+        </section>
+
+        <section className="cw-shift" aria-label="Shift actions">
+          <div className={`cw-panel ${clockedIn ? 'is-end' : 'is-start'}`} key={clockedIn ? 'end' : 'start'}>
+            {clockedIn ? (
+              <>
+                <h2>{t('shift.endTitle')}</h2>
+                <p>{t('shift.endText')}</p>
+                <ClockForm
+                  onClock={handleClockOut}
+                  isClockingIn={false}
+                  clockedIn={clockedIn}
+                  disabled={!clockedIn || busy}
+                  loading={loadingClock}
+                />
+              </>
+            ) : (
+              <>
+                <h2>{t('shift.startTitle')}</h2>
+                <p>{t('shift.startText')}</p>
+                <ClockForm
+                  onClock={handleClockIn}
+                  isClockingIn={true}
+                  clockedIn={clockedIn}
+                  disabled={clockedIn || busy}
+                  loading={loadingClock}
+                />
+              </>
+            )}
+          </div>
+
+          <aside className="cw-side">
+            <div className="cw-geo">
+              <div className="cw-radar" aria-hidden="true"><span className="cw-sweep" /><EnvironmentOutlined /></div>
+              <p>{t('cw.notice')}</p>
+            </div>
+
+            <div className="cw-week">
+              <div className="cw-week-top">
+                <strong>{tr('cw.week', 'This week')}</strong>
+                <span>{daysWorked} / 7</span>
+              </div>
+              <ol>
+                {week.map((d, i) => (
+                  <li key={i} className={`${d.worked ? 'is-worked' : ''}${d.isToday ? ' is-today' : ''}`} style={{ '--i': i }}>
+                    <span className="cw-day-dot">{d.worked && <CheckOutlined />}</span>
+                    <span className="cw-day-name">{d.day.toLocaleDateString(locale, { weekday: 'narrow' })}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </aside>
+        </section>
+
+        <section className="cw-history">
+          <h2>{t('history.title')}</h2>
+          <p>{t('history.text')}</p>
+          <StaffHistoryTable userId={userId} />
+        </section>
+      </main>
+
+      {flash && (
+        <div className={`cw-burst is-${flash}`} key={flash} role="status">
+          <div className="cw-burst-card">
+            <svg viewBox="0 0 80 80" aria-hidden="true">
+              <circle className="cw-burst-ring" cx="40" cy="40" r="34" />
+              <path d="M24 41l11 11 22-24" />
+            </svg>
+            <strong>{flash === 'in' ? t('msg.clockedIn') : t('msg.shiftDone')}</strong>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

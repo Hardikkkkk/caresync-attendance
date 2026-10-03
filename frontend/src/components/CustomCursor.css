@@ -1,0 +1,53 @@
+/* Hide the native cursor only when the custom one is running (set by CustomCursor.js) */
+.has-custom-cursor,
+.has-custom-cursor * { cursor: none !important; }
+.has-custom-cursor input,
+.has-custom-cursor textarea,
+.has-custom-cursor select { cursor: auto !important; }
+
+.cc-dot,
+.cc-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  will-change: transform;
+  transition: opacity 0.2s ease;
+}
+.cc-dot { width: 8px; height: 8px; margin: -4px 0 0 -4px; }
+.cc-ring { width: 38px; height: 38px; margin: -19px 0 0 -19px; }
+.cc-dot span,
+.cc-ring span { display: block; width: 100%; height: 100%; border-radius: 50%; }
+
+/* The dot beats like a pulse (lub-dub) */
+.cc-dot span {
+  background: #1c7c7d;
+  box-shadow: 0 0 0 1.5px #fff;
+  animation: cs-beat 1.6s ease-in-out infinite;
+  transition: transform 0.2s ease;
+}
+.cc-ring span {
+  border: 1.5px solid rgba(28, 124, 125, 0.6);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Over buttons and links */
+.cc-ring.is-hover span { transform: scale(1.7); background: rgba(28, 124, 125, 0.14); border-color: #e8a33d; }
+.cc-dot.is-hover span { animation: none; transform: scale(0.5); }
+
+/* Over the 3D scene and the geofence map (drag to explore) */
+.cc-ring.is-drag span { transform: scale(1.35); border-style: dashed; border-color: #e8a33d; }
+
+/* Pressed */
+.cc-ring.is-down span { transform: scale(0.8); }
+.cc-ring.is-down.is-hover span { transform: scale(1.4); }
+
+/* Hidden over text fields (native caret shows) or when the mouse leaves the window */
+.cc-dot.is-text, .cc-ring.is-text,
+.cc-dot.is-away, .cc-ring.is-away { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-dot span { animation: none; }
+}

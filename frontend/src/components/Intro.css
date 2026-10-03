@@ -1,0 +1,120 @@
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9000; /* below the custom cursor (9999) so the cursor stays visible */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f8f7;
+  color: #12303a;
+  font-family: "Figtree", "Mukta", system-ui, sans-serif;
+  transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+}
+/* Brand-colour edge that leads the lift */
+.intro::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 6px;
+  background: linear-gradient(90deg, #1c7c7d, #e8a33d);
+}
+.intro.is-lifting { transform: translateY(-101%); }
+
+.intro-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Logo: ring draws itself, the amber arc follows, then it beats once */
+.intro-mark {
+  width: clamp(64px, 10vw, 88px);
+  height: auto;
+  overflow: visible;
+  animation: cs-beat 1.2s 1.35s ease-in-out 1;
+}
+.intro-ring,
+.intro-arc {
+  fill: none;
+  stroke-width: 8;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.intro-ring {
+  stroke: #1c7c7d;
+  transform: rotate(-90deg);
+  transform-origin: 32px 32px;
+  animation: intro-draw 0.9s 0.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.intro-arc {
+  stroke: #e8a33d;
+  animation: intro-draw 0.4s 0.85s ease-out forwards;
+}
+
+/* Name: letters rise out of a mask, one after another */
+.intro-word {
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  font-family: "Lexend", "Mukta", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.4rem, 7vw, 4rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.intro-word span {
+  display: inline-block;
+  transform: translateY(110%);
+  animation: intro-letter 0.6s calc(0.5s + var(--i) * 55ms) cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* Heartbeat line draws across */
+.intro-ecg { width: min(360px, 70vw); height: auto; }
+.intro-ecg path {
+  fill: none;
+  stroke: #1c7c7d;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: intro-draw 1s 1s ease-in-out forwards;
+}
+
+/* Hook line */
+.intro-line {
+  margin: 0;
+  max-width: 28ch;
+  color: #4f6770;
+  font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(12px);
+  animation: intro-fade 0.7s 1.8s ease forwards;
+}
+
+.intro-skip {
+  position: absolute;
+  right: 20px;
+  bottom: 24px;
+  padding: 8px 14px;
+  border: 1px solid #dbe6e2;
+  border-radius: 8px;
+  background: transparent;
+  color: #4f6770;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0;
+  animation: intro-fade 0.4s 0.6s ease forwards;
+}
+.intro-skip:hover { background: #ddefea; color: #12303a; }
+.intro-skip:focus-visible { outline: 3px solid #e8a33d; outline-offset: 2px; }
+
+@keyframes intro-draw { to { stroke-dashoffset: 0; } }
+@keyframes intro-letter { to { transform: none; } }
+@keyframes intro-fade { to { opacity: 1; transform: none; } }
