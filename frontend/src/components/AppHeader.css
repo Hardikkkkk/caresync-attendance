@@ -1,0 +1,112 @@
+.app-header {
+  --ink: #12303a;
+  --teal: #1c7c7d;
+  --teal-light: #3fb8b4;
+  --mint: #ddefea;
+  --amber: #e8a33d;
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(18, 48, 58, 0.9);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: "Figtree", "Mukta", system-ui, -apple-system, "Segoe UI", sans-serif;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.app-header.is-scrolled {
+  background: rgba(18, 48, 58, 0.97);
+  box-shadow: 0 12px 30px -16px rgba(8, 24, 30, 0.6);
+}
+.app-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px clamp(16px, 4vw, 40px);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  transition: padding 0.3s ease;
+}
+.app-header.is-scrolled .app-header-inner { padding-top: 6px; padding-bottom: 6px; }
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Lexend", "Mukta", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #fff;
+}
+.app-brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 5px solid var(--teal-light);
+  border-right-color: var(--amber);
+  animation: cs-beat 1.8s ease-in-out infinite;
+}
+
+.app-nav { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+.app-nav a {
+  position: relative;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.app-nav a:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.app-nav a.active { color: #fff; }
+/* Underline slides in on hover and stays on the active page */
+.app-nav a::after {
+  content: "";
+  position: absolute;
+  left: 14px; right: 14px; bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal-light), var(--amber));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.app-nav a:hover::after,
+.app-nav a.active::after { transform: scaleX(1); }
+
+.app-logout {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid var(--mint);
+  background: transparent;
+  color: var(--mint);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transform: translate(var(--mx, 0px), var(--my, 0px));
+  transition: background 0.2s ease, color 0.2s ease, transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.app-logout:hover { background: var(--mint); color: var(--ink); }
+.app-header a:focus-visible,
+.app-header button:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+
+/* Scroll progress along the bottom edge */
+.app-progress {
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--teal-light), var(--amber));
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+@media (max-width: 560px) {
+  .app-header-inner { flex-wrap: wrap; gap: 8px 16px; }
+  .app-nav { order: 3; flex-basis: 100%; }
+  .app-logout { margin-left: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header, .app-header-inner, .app-nav a, .app-nav a::after, .app-logout { transition: none; }
+}

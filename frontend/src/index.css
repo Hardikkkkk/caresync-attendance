@@ -1,13 +1,83 @@
+/* Native smooth scroll is the fallback; Lenis takes over when it is running */
+html, body { height: auto; min-height: 100%; }
+/* Grommet's root should grow with the page, not scroll on its own */
+#root > div { min-height: 100vh; }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+
+  font-family:
+    "Figtree",
+    "Mukta",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
     sans-serif;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  background: #f6f8f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: #ddefea;
+  color: #12303a;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family:
+    source-code-pro,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Courier New",
     monospace;
+}
+
+/* ---------- Shared keyframes (used by Home, AppHeader and the cursor) ---------- */
+@keyframes cs-rise {
+  from { opacity: 0; transform: translateY(24px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+/* lub-dub heartbeat */
+@keyframes cs-beat {
+  0%, 56%, 100% { transform: scale(1); }
+  14% { transform: scale(1.18); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.1); }
+}
+@keyframes cs-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(28, 124, 125, 0.4); }
+  70%, 100% { box-shadow: 0 0 0 14px rgba(28, 124, 125, 0); }
+}
+@keyframes cs-live {
+  0% { box-shadow: 0 0 0 0 rgba(28, 124, 125, 0.5); }
+  100% { box-shadow: 0 0 0 7px rgba(28, 124, 125, 0); }
+}
+
+/* Safety net: no looping or entrance animation for reduced-motion users */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }

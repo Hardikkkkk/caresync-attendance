@@ -1,0 +1,12 @@
+.lang-switch {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #dbe6e2;
+  background: #ffffff;
+  color: #12303a;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lang-switch:hover { background: #ddefea; }
+.lang-switch:focus-visible { outline: 3px solid #e8a33d; outline-offset: 2px; }
